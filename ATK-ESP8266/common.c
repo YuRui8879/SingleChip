@@ -20,12 +20,14 @@
 //     1,清零USART3_RX_STA;
 u8 atk_8266_at_response(u16 *puplimit, u16 *pdownlimit,u8 *plimitflag,u8 *state)
 {
-	u8 test[] = "TESTOK";
+	u8 testopen[] = "TESTOPENOK";
+	u8 testclose[] = "TESTCLOSEOK";
 	u8 begin[] = "BEGINOK";
 	u8 stop[] = "STOPOK";
 	u8 limit[] = "LIMITOK";
 	u8 unlimit[] = "UNLIMITOK";
-	u8 testflag = 0;
+	u8 testopenflag = 0;
+	u8 testcloseflag = 0;
 	static u8 beginflag;
 	static u8 stopflag;
 	static u8 printflag;
@@ -36,29 +38,48 @@ u8 atk_8266_at_response(u16 *puplimit, u16 *pdownlimit,u8 *plimitflag,u8 *state)
 	u16 uplimit = 0;
 	u16 downlimit = 0;
 	u8 t = 0;
-	static u8 output = 1;
 	
 	if(USART3_RX_STA&0X8000)		//接收到一次数据了
 	{ 
 		USART3_RX_BUF[USART3_RX_STA&0X7FFF]=0;//添加结束符
 		printf("%s",USART3_RX_BUF);	//发送到串口
-		for(t = 0;t<6;t++)
+		for(t = 0;t<10;t++)
 		{
-			if(USART3_RX_BUF[38+t]==test[t])
+			if(USART3_RX_BUF[39+t]==testopen[t])
 			{
-				testflag = 1;
+				testopenflag = 1;
 			}
-			else if(USART3_RX_BUF[11+t]==test[t])
+			else if(USART3_RX_BUF[12+t]==testopen[t])
 			{
-				testflag = 1;
+				testopenflag = 1;
 			}
-			else if(USART3_RX_BUF[22+t]==test[t])
+			else if(USART3_RX_BUF[23+t]==testopen[t])
 			{
-				testflag = 1;
+				testopenflag = 1;
 			}
 			else
 			{
-				testflag = 0;
+				testopenflag = 0;
+				break;
+			}
+		}
+		for(t = 0;t<11;t++)
+		{
+			if(USART3_RX_BUF[39+t]==testclose[t])
+			{
+				testcloseflag = 1;
+			}
+			else if(USART3_RX_BUF[12+t]==testclose[t])
+			{
+				testcloseflag = 1;
+			}
+			else if(USART3_RX_BUF[23+t]==testclose[t])
+			{
+				testcloseflag = 1;
+			}
+			else
+			{
+				testcloseflag = 0;
 				break;
 			}
 		}
@@ -140,26 +161,25 @@ u8 atk_8266_at_response(u16 *puplimit, u16 *pdownlimit,u8 *plimitflag,u8 *state)
 		}
 		USART3_RX_STA=0;
 	}
-	if(testflag)
+	if(testopenflag)
 	{
-		if(output)
-		{
-			*state = 1;
-			printf("\n\r打开报警电路");
-			GPIO_SetBits(GPIOA,GPIO_Pin_5);
-			LCD_ShowString(114,90,200,16,16,"ON ");
-			output = 0;
-		}
-		else
-		{
-			*state = 2;
-			printf("\n\r关闭报警电路");
-			GPIO_ResetBits(GPIOA,GPIO_Pin_5);
-			LCD_ShowString(114,90,200,16,16,"OFF");
-			output = 1;
-		}
-		LED1 = !LED1;
-		return 0;
+		*state = 2;
+		printf("\n\r打开报警电路");
+		GPIO_SetBits(GPIOA,GPIO_Pin_5);
+		POINT_COLOR=GREEN;
+		LCD_ShowString(114,90,200,16,16,"ON ");
+		LED1 = 0;
+		return 1; 
+	}
+	if(testcloseflag)
+	{
+		*state = 7;
+		printf("\n\r关闭报警电路");
+		GPIO_ResetBits(GPIOA,GPIO_Pin_5);
+		POINT_COLOR=RED;
+		LCD_ShowString(114,90,200,16,16,"OFF");
+		LED1 = 1;
+		return 1;
 	}
 	if(limitflag)
 	{
@@ -182,6 +202,7 @@ u8 atk_8266_at_response(u16 *puplimit, u16 *pdownlimit,u8 *plimitflag,u8 *state)
 		downlimit /= 10;
 		*pdownlimit = downlimit;
 		*plimitflag = 1;
+		POINT_COLOR=GREEN;
 		LCD_ShowString(202,130,200,16,16,"ON ");
 		return 1;
 	}
@@ -190,6 +211,7 @@ u8 atk_8266_at_response(u16 *puplimit, u16 *pdownlimit,u8 *plimitflag,u8 *state)
 		*state = 6;
 		*plimitflag = 0;
 		printf("\r\n温度报警已解除");
+		POINT_COLOR=RED;
 		LCD_ShowString(202,130,200,16,16,"OFF");
 		return 1;
 	}
@@ -197,6 +219,7 @@ u8 atk_8266_at_response(u16 *puplimit, u16 *pdownlimit,u8 *plimitflag,u8 *state)
 	{
 		*state = 3;
 		Adc_Init();
+		POINT_COLOR=GREEN;
 		LCD_ShowString(82,110,200,16,16,"ON ");
 		printf("\r\nADC已启动");
 		stopflag = 0;
@@ -206,6 +229,7 @@ u8 atk_8266_at_response(u16 *puplimit, u16 *pdownlimit,u8 *plimitflag,u8 *state)
 	{
 		*state = 4;
 		ADC_Cmd(ADC1,DISABLE);
+		POINT_COLOR=RED;
 		LCD_ShowString(82,110,200,16,16,"OFF");
 		if(!printflag)
 		{
@@ -346,7 +370,7 @@ void atk_8266_test(void)
 	u16 *pdownlimit = &downlimit;
 	u8 limitflag = 0;
 	u8 *plimitflag = &limitflag;
-	u8 state = 0;
+	u8 state = 1;
 	u8 *pstate = &state;
 	float temp;
 	float showtemp;
@@ -375,6 +399,7 @@ void atk_8266_test(void)
 		if(flag == 1)
 		{
 			adcx=Get_Adc_Average(ADC_Channel_1,10);
+			POINT_COLOR=BLUE;
 			LCD_ShowxNum(106,150,adcx,4,16,0);//显示ADC的值
 			temp=(float)adcx*(3.3/4096);
 			showadcx = temp;
@@ -400,7 +425,14 @@ void atk_8266_test(void)
 			}
 			else
 			{
-				GPIO_ResetBits(GPIOA,GPIO_Pin_5);
+				if(state==2)
+				{
+					GPIO_SetBits(GPIOA,GPIO_Pin_5);
+				}
+				else
+				{
+					GPIO_ResetBits(GPIOA,GPIO_Pin_5);
+				}
 			}
 			integra=temp;
 			temp-=integra;
@@ -421,23 +453,24 @@ void atk_8266_test(void)
 			temp *= 10;
 			little = temp;
 			result[3] = u8tochar(little);
-			result[4] = '\0';
-			/*
+			//result[4] = '\0';
+			
 			result[4] = u8tochar(state);
 			result[5] = '\0';
-			*/
+			
 			printf("\r\n采样值为：%s",result);
 			
 			
 			while(!atk_8266_consta_check())
 			{
 				delay_ms(10);
+				POINT_COLOR=RED;
 				LCD_ShowString(98,70,200,16,16,"Disconnect");	
 			}
 			
-			
-			LCD_ShowString(98,70,200,16,16,"Connect");	
-			while(atk_8266_send_cmd("AT+CIPSEND=0,4","OK",20));
+			POINT_COLOR=GREEN;
+			LCD_ShowString(98,70,200,16,16,"Open");	
+			while(atk_8266_send_cmd("AT+CIPSEND=0,5","OK",20));
 			delay_ms(20);
 			while(atk_8266_send_data(result,"OK",200))
 			{

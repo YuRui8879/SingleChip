@@ -40,17 +40,19 @@
 	Adc_Init();
 	usart3_init(115200);		//初始化串口3 
 	LCD_Init();
-	POINT_COLOR=RED;//设置字体为红色 
+	POINT_COLOR=BLUE;//设置字体为红色 
 	LCD_ShowString(10,50,200,16,16,"STM32 Program");	
 	LCD_ShowString(10,70,200,16,16,"WIFI_State:");	
 	LCD_ShowString(10,90,200,16,16,"Output_State:");
 	LCD_ShowString(10,110,200,16,16,"AD_State:");
 	LCD_ShowString(10,130,200,16,16,"Temperature_Alarm_State:");
+	 POINT_COLOR=GREEN;//设置字体为蓝色
 	 LCD_ShowString(82,110,200,16,16,"ON");
+	 POINT_COLOR=RED;
 	 LCD_ShowString(202,130,200,16,16,"OFF");
 	 LCD_ShowString(114,90,200,16,16,"OFF");
 	//显示提示信息
-	POINT_COLOR=BLUE;//设置字体为蓝色
+	POINT_COLOR=BLUE;
 	LCD_ShowString(10,150,200,16,16,"ADC_CH0_VAL:");	      
 	LCD_ShowString(10,170,200,16,16,"ADC_CH0_VOL:0.000V");
 	atk_8266_test();		//进入ATK_ESP8266测试
